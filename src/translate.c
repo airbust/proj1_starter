@@ -44,10 +44,33 @@
 unsigned write_pass_one(FILE* output, const char* name, char** args, int num_args) {
     if (strcmp(name, "li") == 0) {
         /* YOUR CODE HERE */
-        return 0;
+        if (num_args != 2) {
+            return 0;
+        }
+        long int immediate;
+        int err = translate_num(&immediate, args[1], -2147483648, 4294967295);
+        if (err == -1) {
+            return 0;
+        }
+        if (immediate >= -32768 && immediate <= 32767) {
+            fprintf(output, "addiu %s $0 %ld\n", args[0], immediate);
+            return 1;
+        }
+        int immediate_hi = immediate & -65536;
+        int immediate_lo = immediate & 65535;
+        immediate_hi >>= 16;
+        immediate_hi &= 65535;
+        fprintf(output, "lui $at %d\n", immediate_hi);
+        fprintf(output, "ori %s $at %d\n", args[0], immediate_lo);
+        return 2;
     } else if (strcmp(name, "blt") == 0) {
         /* YOUR CODE HERE */
-        return 0;
+        if (num_args != 3) {
+            return 0;
+        }
+        fprintf(output, "slt $at %s %s\n", args[0], args[1]);
+        fprintf(output, "bne $at $0 %s\n", args[2]);
+        return 2;
     } else {
         write_inst_string(output, name, args, num_args);
         return 1;
