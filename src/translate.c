@@ -6,6 +6,9 @@
 #include "translate_utils.h"
 #include "translate.h"
 
+#define IMM_LOWER_BOUND 65535
+#define IMM_UPPER_BOUND -32768
+
 /* Writes instructions during the assembler's first pass to OUTPUT. The case
    for general instructions has already been completed, but you need to write
    code to translate the li and blt pseudoinstructions. Your pseudoinstruction 
@@ -79,6 +82,19 @@ int translate_inst(FILE* output, const char* name, char** args, size_t num_args,
     else if (strcmp(name, "sltu") == 0)  return write_rtype (0x2b, output, args, num_args);
     else if (strcmp(name, "sll") == 0)   return write_shift (0x00, output, args, num_args);
     /* YOUR CODE HERE */
+    else if (strcmp(name, "jr") == 0)    return write_jr (0x08, output, args, num_args);
+    else if (strcmp(name, "addiu") == 0) return write_addiu (0x09, output, args, num_args);
+    else if (strcmp(name, "ori") == 0)   return write_ori (0x0d, output, args, num_args);
+    else if (strcmp(name, "lui") == 0)   return write_lui (0x0f, output, args, num_args);
+    else if (strcmp(name, "lb") == 0)    return write_mem (0x20, output, args, num_args);
+    else if (strcmp(name, "lbu") == 0)   return write_mem (0x24, output, args, num_args);
+    else if (strcmp(name, "lw") == 0)    return write_mem (0x23, output, args, num_args);
+    else if (strcmp(name, "sb") == 0)    return write_mem (0x28, output, args, num_args);
+    else if (strcmp(name, "sw") == 0)    return write_mem (0x2b, output, args, num_args);
+    else if (strcmp(name, "beq") == 0)   return write_branch (0x04, output, args, num_args, addr, symtbl);
+    else if (strcmp(name, "bne") == 0)   return write_branch (0x05, output, args, num_args, addr, symtbl);
+    else if (strcmp(name, "j") == 0)     return write_jump (0x02, output, args, num_args, addr, reltbl);
+    else if (strcmp(name, "jal") == 0)   return write_jump (0x03, output, args, num_args, addr, reltbl);
     else                                 return -1;
 }
 
@@ -91,12 +107,16 @@ int translate_inst(FILE* output, const char* name, char** args, size_t num_args,
  */
 int write_rtype(uint8_t funct, FILE* output, char** args, size_t num_args) {
     // Perhaps perform some error checking?
-
+    if (num_args != 3) {
+        return -1;
+    }
     int rd = translate_reg(args[0]);
     int rs = translate_reg(args[1]);
     int rt = translate_reg(args[2]);
-
-    uint32_t instruction = 0;
+    if (rd == -1 || rs == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (rs << 21) | (rt << 16) | (rd << 11) | funct;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -110,13 +130,127 @@ int write_rtype(uint8_t funct, FILE* output, char** args, size_t num_args) {
  */
 int write_shift(uint8_t funct, FILE* output, char** args, size_t num_args) {
 	// Perhaps perform some error checking?
-
+    if (num_args != 3) {
+        return -1;
+    }
     long int shamt;
     int rd = translate_reg(args[0]);
     int rt = translate_reg(args[1]);
     int err = translate_num(&shamt, args[2], 0, 31);
-
-    uint32_t instruction = 0;
+    if (err == -1 || rd == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (rt << 16) | (rd << 11) | (shamt << 6) | funct;
     write_inst_hex(output, instruction);
     return 0;
+}
+
+int write_jr(uint8_t funct, FILE* output, char** args, size_t num_args) {
+    if (num_args != 1) {
+        return -1;
+    }
+    int rs = translate_reg(args[0]);
+    if (rs == -1) {
+        return -1;
+    }
+    uint32_t instruction = (rs << 21) | funct;
+    write_inst_hex(output, instruction);
+    return 0;
+}
+
+int write_addiu(uint8_t opcode, FILE* output, char** args, size_t num_args) {
+    if (num_args != 3) {
+        return -1;
+    }
+    long int immediate;
+    int rt = translate_reg(args[0]);
+    int rs = translate_reg(args[1]);
+    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    if (err == -1 || rs == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | immediate;
+    write_inst_hex(output, instruction);
+    return 0;
+}
+
+int write_ori(uint8_t opcode, FILE* output, char** args, size_t num_args) {
+    if (num_args != 3) {
+        return -1;
+    }
+    long int immediate;
+    int rt = translate_reg(args[0]);
+    int rs = translate_reg(args[1]);
+    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    if (err == -1 || rs == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | immediate;
+    write_inst_hex(output, instruction);
+    return 0;
+}
+
+int write_lui(uint8_t opcode, FILE* output, char** args, size_t num_args) {
+    if (num_args != 3) {
+        return -1;
+    }
+    long int immediate;
+    int rt = translate_reg(args[0]);
+    int rs = translate_reg(args[1]);
+    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    if (err == -1 || rs == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | immediate;
+    write_inst_hex(output, instruction);
+    return 0;
+}
+
+int write_mem(uint8_t opcode, FILE* output, char** args, size_t num_args) {
+    if (num_args != 3) {
+        return -1;
+    }
+    long int offset;
+    int rt = translate_reg(args[0]);
+    int rs = translate_reg(args[2]);
+    int err = translate_num(&offset, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    if (err == -1 || rs == -1 || rt == -1) {
+        return -1;
+    }
+    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | offset;
+    write_inst_hex(output, instruction);
+    return 0;    
+}
+
+int write_branch(uint8_t opcode, FILE* output, char** args, size_t num_args, 
+    uint32_t addr, SymbolTable* symtbl) {
+    if (num_args != 3) {
+        return -1;
+    }
+    int rs = translate_reg(args[0]);
+    int rt = translate_reg(args[1]);
+    char* label = args[2];
+    int64_t label_addr;
+    if ((label_addr = get_addr_for_symbol(symtbl, label)) == -1) {
+        return -1;
+    }
+    int16_t immediate = (label_addr - addr - 4) / 4;
+    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | immediate;
+    write_inst_hex(output, instruction);
+    return 0;    
+}
+
+int write_jump(uint8_t opcode, FILE* output, char** args, size_t num_args, 
+    uint32_t addr, SymbolTable* reltbl) {
+    if (num_args != 1) {
+        return -1;
+    }
+    char* label = args[0];
+    int err = add_to_table(reltbl, label, addr);
+    if (err == -1) {
+        return -1;
+    }
+    uint32_t instruction = opcode << 26;
+    write_inst_hex(output, instruction);
+    return 0;    
 }
