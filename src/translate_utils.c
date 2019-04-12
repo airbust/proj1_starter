@@ -60,7 +60,7 @@ int translate_num(long int* output, const char* str, long int lower_bound,
     }
     /* YOUR CODE HERE */
     char* end_ptr;
-    *output = strtol(str, &end_ptr, 10);
+    *output = strtol(str, &end_ptr, 0);
     if (*output >= lower_bound && *output <= upper_bound && *end_ptr == '\0') {
         return 0;
     }

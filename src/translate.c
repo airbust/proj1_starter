@@ -6,9 +6,6 @@
 #include "translate_utils.h"
 #include "translate.h"
 
-#define IMM_LOWER_BOUND 65535
-#define IMM_UPPER_BOUND -32768
-
 /* Writes instructions during the assembler's first pass to OUTPUT. The case
    for general instructions has already been completed, but you need to write
    code to translate the li and blt pseudoinstructions. Your pseudoinstruction 
@@ -48,11 +45,11 @@ unsigned write_pass_one(FILE* output, const char* name, char** args, int num_arg
             return 0;
         }
         long int immediate;
-        int err = translate_num(&immediate, args[1], -2147483648, 4294967295);
+        int err = translate_num(&immediate, args[1], LARGE_IMM_LOWER_BOUND, LARGE_IMM_UPPER_BOUND);
         if (err == -1) {
             return 0;
         }
-        if (immediate >= -32768 && immediate <= 32767) {
+        if (immediate >= IMM_LOWER_BOUND && immediate <= IMM_UPPER_BOUND) {
             fprintf(output, "addiu %s $0 %ld\n", args[0], immediate);
             return 1;
         }
@@ -188,7 +185,7 @@ int write_addiu(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     long int immediate;
     int rt = translate_reg(args[0]);
     int rs = translate_reg(args[1]);
-    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    int err = translate_num(&immediate, args[2], IMM_LOWER_BOUND, IMM_UPPER_BOUND);
     if (err == -1 || rs == -1 || rt == -1) {
         return -1;
     }
@@ -204,7 +201,7 @@ int write_ori(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     long int immediate;
     int rt = translate_reg(args[0]);
     int rs = translate_reg(args[1]);
-    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    int err = translate_num(&immediate, args[2], IMM_LOWER_BOUND, IMM_UPPER_BOUND);
     if (err == -1 || rs == -1 || rt == -1) {
         return -1;
     }
@@ -219,12 +216,11 @@ int write_lui(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     }
     long int immediate;
     int rt = translate_reg(args[0]);
-    int rs = translate_reg(args[1]);
-    int err = translate_num(&immediate, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
-    if (err == -1 || rs == -1 || rt == -1) {
+    int err = translate_num(&immediate, args[1], IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    if (err == -1 || rt == -1) {
         return -1;
     }
-    uint32_t instruction = (opcode << 26) | (rs << 21) | (rt << 16) | immediate;
+    uint32_t instruction = (opcode << 26) | (rt << 16) | immediate;
     write_inst_hex(output, instruction);
     return 0;
 }
@@ -236,7 +232,7 @@ int write_mem(uint8_t opcode, FILE* output, char** args, size_t num_args) {
     long int offset;
     int rt = translate_reg(args[0]);
     int rs = translate_reg(args[2]);
-    int err = translate_num(&offset, args, IMM_LOWER_BOUND, IMM_UPPER_BOUND);
+    int err = translate_num(&offset, args[1], IMM_LOWER_BOUND, IMM_UPPER_BOUND);
     if (err == -1 || rs == -1 || rt == -1) {
         return -1;
     }

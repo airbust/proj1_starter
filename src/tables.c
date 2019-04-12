@@ -92,19 +92,19 @@ int add_to_table(SymbolTable* table, const char* name, uint32_t addr) {
         return -1;
     }
     if (table->mode == SYMTBL_UNIQUE_NAME && get_addr_for_symbol(table, name) != -1) {
-        name_already_exists();
+        name_already_exists(name);
         return -1;
     }
     table->tbl = (Symbol*) realloc(table->tbl, sizeof(Symbol) * (table->len + 1));
     if (table->tbl == NULL) {
         allocation_failed();
     }
-    table->tbl[len].addr = addr;
-    table->tbl[len].name = (char*) malloc(sizeof(char) * (strlen(name) + 1));
-    if (table->tbl[len].name == NULL) {
+    table->tbl[table->len].addr = addr;
+    table->tbl[table->len].name = (char*) malloc(sizeof(char) * (strlen(name) + 1));
+    if (table->tbl[table->len].name == NULL) {
         allocation_failed();
     }
-    strcpy(table->tbl[len].name, name);
+    strcpy(table->tbl[table->len].name, name);
     table->len++;
     table->cap += sizeof(Symbol);
     return 0;

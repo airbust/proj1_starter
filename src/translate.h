@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+#define IMM_LOWER_BOUND INT16_MIN
+#define IMM_UPPER_BOUND UINT16_MAX
+#define LARGE_IMM_LOWER_BOUND INT32_MIN
+#define LARGE_IMM_UPPER_BOUND UINT32_MAX
+
 /* IMPLEMENT ME - see documentation in translate.c */
 unsigned write_pass_one(FILE* output, const char* name, char** args, int num_args);
 
